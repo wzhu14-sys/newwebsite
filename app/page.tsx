@@ -16,10 +16,6 @@ import {
   applyFilterToCanvas,
 } from "./utils/filters";
 import {
-  getRandom4Poses,
-  PosePrompt,
-} from "./utils/poses";
-import {
   DoodleCanvas,
   DoodleCanvasRef,
 } from "./components/DoodleCanvas";
@@ -42,12 +38,8 @@ export default function PhotoBooth() {
   const [showApertureControl, setShowApertureControl] = useState<boolean>(false);
 
   // Filter Selection
-  const [selectedFilter, setSelectedFilter] = useState<FilterId>("kodak");
+  const [selectedFilter, setSelectedFilter] = useState<FilterId>("haru");
   const [showFilterPicker, setShowFilterPicker] = useState<boolean>(false);
-
-  // Pose Roulette
-  const [poses, setPoses] = useState<PosePrompt[]>([]);
-  const [enablePoseRoulette, setEnablePoseRoulette] = useState<boolean>(true);
 
   // Multi-shot sequence state
   const [currentShotIndex, setCurrentShotIndex] = useState<number>(0);
@@ -63,12 +55,7 @@ export default function PhotoBooth() {
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  // Initialize poses on load
-  useEffect(() => {
-    setPoses(getRandom4Poses());
-  }, []);
-
-  // Start camera stream
+  // Start camera stream at highest resolution supported
   const startCamera = useCallback(
     async (facing: "user" | "environment" = facingMode) => {
       if (streamRef.current) {
@@ -82,11 +69,13 @@ export default function PhotoBooth() {
           return;
         }
 
+        // Request Ultra-HD / 4K / 1080p high resolution constraints
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: facing },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 3840, min: 1280 },
+            height: { ideal: 2160, min: 720 },
+            frameRate: { ideal: 30, max: 60 },
           },
           audio: false,
         });
@@ -119,24 +108,23 @@ export default function PhotoBooth() {
     setFacingMode(nextFacing);
   };
 
-  // Re-roll pose roulette
-  const rerollPoses = () => {
-    setPoses(getRandom4Poses());
-  };
-
-  // Capture single frame with baked filter, grain, and aperture
+  // Capture single frame with uncompressed quality & applied filter
   const captureFrame = useCallback((): string => {
     const video = videoRef.current;
     if (!video) return "";
 
     const canvas = document.createElement("canvas");
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 960;
+    // Use the native camera stream sensor resolution
+    const width = video.videoWidth || 1920;
+    const height = video.videoHeight || 1080;
     canvas.width = width;
     canvas.height = height;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return "";
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     // Mirror image if isMirrored is active
     if (isMirrored) {
@@ -144,7 +132,7 @@ export default function PhotoBooth() {
       ctx.scale(-1, 1);
     }
 
-    // Draw base video
+    // Draw video frame
     const currentFilterConfig = FILTERS.find((f) => f.id === selectedFilter);
     if (currentFilterConfig && currentFilterConfig.cssFilter !== "none") {
       ctx.filter = currentFilterConfig.cssFilter;
@@ -152,10 +140,11 @@ export default function PhotoBooth() {
     ctx.drawImage(video, 0, 0, width, height);
     ctx.filter = "none";
 
-    // Apply pixel-level effects (grain, pixelate, aperture vignette)
+    // Apply filter processing + sharpening
     applyFilterToCanvas(ctx, width, height, selectedFilter, aperture);
 
-    return canvas.toDataURL("image/jpeg", 0.95);
+    // High quality JPEG
+    return canvas.toDataURL("image/jpeg", 1.0);
   }, [isMirrored, selectedFilter, aperture]);
 
   // Run 4-shot photobooth session
@@ -165,11 +154,6 @@ export default function PhotoBooth() {
     setAppState("capturing");
     setCapturedPhotos([]);
     const photos: string[] = [];
-
-    // Ensure we have fresh poses if roulette is enabled
-    if (enablePoseRoulette && poses.length < 4) {
-      setPoses(getRandom4Poses());
-    }
 
     for (let shot = 1; shot <= 4; shot++) {
       setCurrentShotIndex(shot);
@@ -201,13 +185,13 @@ export default function PhotoBooth() {
       setIsFlashing(false);
       setCountdown(null);
 
-      // Pause briefly for user to look at next pose
+      // Brief breather between shots
       if (shot < 4) {
-        await new Promise((r) => setTimeout(r, 800));
+        await new Promise((r) => setTimeout(r, 700));
       }
     }
 
-    // Sequence finished -> Trigger thermal printer whirring sound & eject animation!
+    // Sequence finished -> Thermal printer sound & transition to results
     setIsPrinting(true);
     playThermalPrinterWhir(1.6);
 
@@ -245,7 +229,6 @@ export default function PhotoBooth() {
     [capturedPhotos, selectedThemeId]
   );
 
-  // Handle theme color change
   const handleThemeChange = (themeId: string) => {
     setSelectedThemeId(themeId);
     updateStrip(themeId);
@@ -259,12 +242,9 @@ export default function PhotoBooth() {
     setSaveStatus(null);
     setActiveTab("view");
     startCamera(facingMode);
-    rerollPoses();
   };
 
-  // Save / Share Image
   const handleSave = async () => {
-    // Generate fresh composite with doodle layer baked in
     const doodleCanvas = doodleRef.current?.getCanvas();
     let currentBlob = stripBlob;
     let currentUrl = photoStripUrl;
@@ -293,7 +273,7 @@ export default function PhotoBooth() {
         await navigator.share({
           files: [file],
           title: "Life 4 Cuts Photo Strip",
-          text: "Created with Japanese/Korean Photo Booth!",
+          text: "Created with Photo Booth!",
         });
         setSaveStatus("Saved to Photos / 已分享!");
         setTimeout(() => setSaveStatus(null), 3000);
@@ -322,11 +302,6 @@ export default function PhotoBooth() {
       setTimeout(() => setSaveStatus(null), 3000);
     }
   };
-
-  const currentPose =
-    appState === "capturing" && currentShotIndex > 0
-      ? poses[currentShotIndex - 1]
-      : null;
 
   const currentFilterConfig = FILTERS.find((f) => f.id === selectedFilter);
 
@@ -366,7 +341,7 @@ export default function PhotoBooth() {
         </div>
       )}
 
-      {/* 2. Full-Screen Live Video Feed with Filter & Aperture Preview */}
+      {/* 2. Full-Screen Live Video Feed with Filter Preview */}
       <div
         className="absolute inset-0 w-full h-full overflow-hidden bg-neutral-950 flex items-center justify-center"
         style={{
@@ -392,7 +367,7 @@ export default function PhotoBooth() {
           }}
         />
 
-        {/* Aperture Soft Depth-of-Field Vignette Simulation */}
+        {/* Aperture Soft Depth-of-Field Simulation */}
         {aperture < 8 && (
           <div
             className="absolute inset-0 pointer-events-none transition-opacity duration-300"
@@ -401,18 +376,18 @@ export default function PhotoBooth() {
               inset: 0,
               background: `radial-gradient(circle at center, transparent 40%, rgba(0,0,0,${(
                 (8 - aperture) *
-                0.05
+                0.04
               ).toFixed(2)}) 85%)`,
-              backdropFilter: `blur(${Math.max(0, (4 - aperture) * 1.2)}px)`,
+              backdropFilter: `blur(${Math.max(0, (4 - aperture) * 1.1)}px)`,
             }}
           />
         )}
 
         {/* Purikura Framing Corner Brackets */}
-        <div className="viewfinder-corner corner-tl border-pink-400/60" />
-        <div className="viewfinder-corner corner-tr border-pink-400/60" />
-        <div className="viewfinder-corner corner-bl border-pink-400/60" />
-        <div className="viewfinder-corner corner-br border-pink-400/60" />
+        <div className="viewfinder-corner corner-tl border-pink-400/70" />
+        <div className="viewfinder-corner corner-tr border-pink-400/70" />
+        <div className="viewfinder-corner corner-bl border-pink-400/70" />
+        <div className="viewfinder-corner corner-br border-pink-400/70" />
       </div>
 
       {/* 3. Screen Flash */}
@@ -423,7 +398,7 @@ export default function PhotoBooth() {
         />
       )}
 
-      {/* 4. Top Safe-Area Bar: Filters, Poses, Mirror, Aperture */}
+      {/* 4. Top Safe-Area Bar: Filters, Mirror, Aperture */}
       {appState !== "results" && (
         <header
           className="absolute top-0 inset-x-0 flex flex-col px-4 safe-top-area pointer-events-none"
@@ -450,7 +425,7 @@ export default function PhotoBooth() {
 
             {/* Quick Action Pills */}
             <div className="flex items-center gap-2 pointer-events-auto">
-              {/* Filter Button */}
+              {/* Filter Selector Button */}
               <button
                 type="button"
                 onClick={() => {
@@ -482,11 +457,11 @@ export default function PhotoBooth() {
                 f/{aperture}
               </button>
 
-              {/* Mirror Flip Toggle */}
+              {/* Mirror Toggle */}
               <button
                 type="button"
                 onClick={() => setIsMirrored((prev) => !prev)}
-                title={isMirrored ? "镜像开启" : "原图不镜像"}
+                title={isMirrored ? "镜像开" : "镜像关"}
                 className={`p-2 rounded-full backdrop-blur-xl border transition-all ${
                   isMirrored
                     ? "bg-pink-500/30 border-pink-400/50 text-pink-300"
@@ -500,37 +475,49 @@ export default function PhotoBooth() {
             </div>
           </div>
 
-          {/* Sub-bar: Filter Picker Drawer */}
+          {/* Filter Picker Drawer */}
           {showFilterPicker && (
-            <div className="mt-2.5 p-2 bg-black/80 backdrop-blur-2xl border border-white/15 rounded-2xl flex items-center gap-2 overflow-x-auto pointer-events-auto animate-pop shadow-2xl">
-              {FILTERS.map((f) => {
-                const isSelected = selectedFilter === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setSelectedFilter(f.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all ${
-                      isSelected
-                        ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md scale-105"
-                        : "bg-neutral-900 text-neutral-300 border border-neutral-800"
-                    }`}
-                  >
-                    <div>{f.name}</div>
-                    <div className="text-[9px] opacity-75">{f.nameEn}</div>
-                  </button>
-                );
-              })}
+            <div className="mt-2.5 p-2.5 bg-black/85 backdrop-blur-2xl border border-white/15 rounded-2xl flex flex-col gap-2 pointer-events-auto animate-pop shadow-2xl">
+              <div className="text-[11px] font-bold text-pink-300 px-1">
+                选择精选大头贴滤镜:
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {FILTERS.map((f) => {
+                  const isSelected = selectedFilter === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setSelectedFilter(f.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 transition-all text-left ${
+                        isSelected
+                          ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md scale-105"
+                          : "bg-neutral-900 text-neutral-300 border border-neutral-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>{f.name}</span>
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-black/30 font-mono">
+                          {f.badge}
+                        </span>
+                      </div>
+                      <div className="text-[9px] opacity-75 mt-0.5 max-w-[110px] truncate">
+                        {f.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {/* Sub-bar: Aperture Slider Drawer */}
+          {/* Aperture Slider Drawer */}
           {showApertureControl && (
             <div className="mt-2.5 p-3 bg-black/85 backdrop-blur-2xl border border-white/15 rounded-2xl pointer-events-auto animate-pop shadow-2xl flex flex-col gap-1.5">
               <div className="flex justify-between text-xs font-bold text-amber-300">
                 <span>镜头光圈: f/{aperture}</span>
                 <span className="text-neutral-400 text-[11px]">
-                  {aperture <= 2.0 ? "大光圈 • 柔美虚化" : aperture <= 4 ? "标准人像" : "小光圈 • 全景清晰"}
+                  {aperture <= 2.0 ? "大光圈 • 柔光虚化" : aperture <= 4 ? "标准人像" : "小光圈 • 全景清晰"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-1 mt-1">
@@ -551,37 +538,6 @@ export default function PhotoBooth() {
               </div>
             </div>
           )}
-
-          {/* Pose Roulette Card (Camera Idle State) */}
-          {appState === "camera" && enablePoseRoulette && poses.length > 0 && (
-            <div className="mt-3 mx-auto w-full max-w-sm p-2.5 bg-gradient-to-r from-pink-950/70 via-purple-950/70 to-black/80 backdrop-blur-xl border border-pink-500/30 rounded-2xl shadow-lg pointer-events-auto flex items-center justify-between">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <span className="text-xl">🎲</span>
-                <div className="truncate">
-                  <div className="text-xs font-black text-pink-300 flex items-center gap-1.5">
-                    <span>姿势盲盒连拍提示</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-pink-500/30 rounded-full text-pink-200">
-                      4 POSES
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-neutral-300 truncate">
-                    {poses.map((p, idx) => `${idx + 1}.${p.emoji}${p.title}`).join("  ")}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                <button
-                  type="button"
-                  onClick={rerollPoses}
-                  title="随机换一批姿势"
-                  className="px-2 py-1 text-xs font-bold bg-pink-500/20 text-pink-300 border border-pink-500/40 rounded-lg active:scale-95 transition-transform"
-                >
-                  换一组 🔄
-                </button>
-              </div>
-            </div>
-          )}
         </header>
       )}
 
@@ -594,7 +550,6 @@ export default function PhotoBooth() {
           {[0, 1, 2, 3].map((index) => {
             const photo = capturedPhotos[index];
             const isCurrent = currentShotIndex === index + 1;
-            const poseItem = poses[index];
             return (
               <div
                 key={index}
@@ -615,8 +570,8 @@ export default function PhotoBooth() {
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-[10px] font-bold text-white/80">
-                    <span>{poseItem ? poseItem.emoji : index + 1}</span>
-                    <span className="text-[9px]">{index + 1}/4</span>
+                    <span>{index + 1}</span>
+                    <span className="text-[9px]">SHOT</span>
                   </div>
                 )}
               </div>
@@ -625,13 +580,12 @@ export default function PhotoBooth() {
         </div>
       )}
 
-      {/* 6. Big Animated Countdown & Pose Tip Overlay during capture */}
+      {/* 6. Big Animated Countdown during capture */}
       {appState === "capturing" && countdown !== null && countdown > 0 && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
           style={{ position: "absolute", inset: 0, zIndex: 40 }}
         >
-          {/* Big number */}
           <div
             key={countdown}
             className="text-9xl font-black text-pink-300 drop-shadow-[0_4px_30px_rgba(255,42,133,0.8)] animate-pop"
@@ -639,19 +593,9 @@ export default function PhotoBooth() {
           >
             {countdown}
           </div>
-
-          {/* Current Pose Prompt Card */}
-          {currentPose && (
-            <div className="mt-4 px-6 py-2.5 rounded-full bg-black/80 backdrop-blur-2xl border-2 border-pink-400/80 shadow-[0_0_24px_rgba(255,105,180,0.5)] flex items-center gap-2.5 animate-pop">
-              <span className="text-3xl">{currentPose.emoji}</span>
-              <div className="text-left">
-                <div className="text-sm font-black text-pink-200">
-                  第 {currentShotIndex} 张: {currentPose.title}
-                </div>
-                <div className="text-xs text-white/80">{currentPose.tip}</div>
-              </div>
-            </div>
-          )}
+          <div className="mt-4 px-6 py-2 rounded-full bg-black/75 backdrop-blur-2xl border border-pink-400/60 shadow-lg text-sm font-bold tracking-wider uppercase text-pink-100">
+            Shot {currentShotIndex} of 4 • 笑一个 📸
+          </div>
         </div>
       )}
 
@@ -670,20 +614,11 @@ export default function PhotoBooth() {
             minHeight: "140px",
           }}
         >
-          {/* Left Dock Button: Pose Roulette Toggle */}
+          {/* Left Dock Button: Active Filter Pill */}
           <div className="w-16 flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setEnablePoseRoulette((prev) => !prev)}
-              className={`p-3 rounded-full backdrop-blur-xl border transition-all ${
-                enablePoseRoulette
-                  ? "bg-pink-500/30 border-pink-400 text-pink-300 shadow-md"
-                  : "bg-white/10 border-white/15 text-white/50"
-              }`}
-              title="切换姿势轮盘"
-            >
-              <span className="text-xl">🎲</span>
-            </button>
+            <span className="text-[11px] font-bold tracking-widest text-pink-300 uppercase px-2.5 py-1 rounded-full bg-pink-500/20 border border-pink-500/30">
+              4 SHOTS
+            </span>
           </div>
 
           {/* Center: Iconic Japanese Purikura Shutter Button */}
@@ -703,7 +638,6 @@ export default function PhotoBooth() {
               cursor: "pointer",
             }}
           >
-            {/* Inner Shutter Solid White with pink ring */}
             <div
               style={{
                 width: "70px",
@@ -780,7 +714,7 @@ export default function PhotoBooth() {
                     : "text-neutral-400 hover:text-white"
                 }`}
               >
-                预览效果 / Strip
+                高清预览 / Preview
               </button>
               <button
                 type="button"
@@ -864,7 +798,6 @@ export default function PhotoBooth() {
               /* Interactive Doodle Mode */
               <div className="relative max-w-[280px] sm:max-w-[320px] w-full flex flex-col items-center">
                 <div className="relative w-full rounded-lg overflow-hidden border border-neutral-700 shadow-2xl">
-                  {/* Background Strip */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photoStripUrl}
@@ -874,8 +807,8 @@ export default function PhotoBooth() {
                   {/* Transparent Drawing Canvas Overlay */}
                   <DoodleCanvas
                     ref={doodleRef}
-                    width={800}
-                    height={2474}
+                    width={1200}
+                    height={3712}
                     className="absolute inset-0 w-full h-full"
                     onStrokeChange={() => updateStrip(selectedThemeId)}
                   />
@@ -897,7 +830,7 @@ export default function PhotoBooth() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              <span>保存相册 / Save Photo Strip</span>
+              <span>保存高清照片条 / Save Photo Strip</span>
             </button>
 
             {/* Retake Button */}

@@ -81,14 +81,14 @@ export interface PhotoStripOptions {
 }
 
 /**
- * Generates high-res vertical photo strip with customizable paper theme and doodle overlay
+ * Generates ultra-high resolution (1200px wide Retina) photo strip
  */
 export async function createPhotoStrip(
   images: string[],
   options: PhotoStripOptions = {}
 ): Promise<{ dataUrl: string; blob: Blob }> {
   const {
-    themeId = "classic-white",
+    themeId = "pastel-pink",
     doodleCanvas = null,
     date = new Date(),
   } = options;
@@ -100,14 +100,14 @@ export async function createPhotoStrip(
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("Could not create canvas context");
 
-  // High resolution dimensions
-  const stripWidth = 800;
-  const marginX = 48;
-  const marginTop = 50;
-  const photoGap = 32;
-  const photoWidth = stripWidth - marginX * 2; // 704px
-  const photoHeight = Math.round(photoWidth * 0.75); // 528px (4:3)
-  const footerHeight = 220;
+  // Ultra-HD Retina Strip Layout (1200px width for razor-sharp photos)
+  const stripWidth = 1200;
+  const marginX = 72;
+  const marginTop = 76;
+  const photoGap = 48;
+  const photoWidth = stripWidth - marginX * 2; // 1056px
+  const photoHeight = Math.round(photoWidth * 0.75); // 792px (4:3)
+  const footerHeight = 320;
 
   const totalHeight =
     marginTop +
@@ -118,16 +118,20 @@ export async function createPhotoStrip(
   canvas.width = stripWidth;
   canvas.height = totalHeight;
 
+  // Maximize rendering quality
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
   // 1. Draw solid paper background
   ctx.fillStyle = theme.bgColor;
   ctx.fillRect(0, 0, stripWidth, totalHeight);
 
-  // 2. Draw outer border
+  // 2. Outer border
   ctx.strokeStyle = theme.borderColor;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(1.5, 1.5, stripWidth - 3, totalHeight - 3);
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, stripWidth - 4, totalHeight - 4);
 
-  // 3. Draw each photo
+  // 3. Draw each high-res photo
   for (let i = 0; i < images.length; i++) {
     const img = await loadImage(images[i]);
     const y = marginTop + i * (photoHeight + photoGap);
@@ -150,28 +154,26 @@ export async function createPhotoStrip(
 
     ctx.drawImage(img, sx, sy, sw, sh, marginX, y, photoWidth, photoHeight);
 
-    // Frame border around photo
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
-    ctx.lineWidth = 1.5;
+    // Frame border around each photo
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.14)";
+    ctx.lineWidth = 2;
     ctx.strokeRect(marginX, y, photoWidth, photoHeight);
   }
 
-  // 4. Footer: Purikura / Life4Cuts style typography
+  // 4. Footer branding
   const footerStartY =
     marginTop +
     images.length * photoHeight +
     (images.length - 1) * photoGap +
-    38;
+    54;
 
-  // Header Title
   ctx.fillStyle = theme.textColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.font = "800 28px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
-  ctx.letterSpacing = "6px";
+  ctx.font = "800 40px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
+  ctx.letterSpacing = "8px";
   ctx.fillText("LIFE 4 CUTS  ✦  PHOTO BOOTH", stripWidth / 2, footerStartY);
 
-  // Date and Time stamp
   const formattedDate = date
     .toLocaleDateString("en-US", {
       month: "short",
@@ -189,26 +191,26 @@ export async function createPhotoStrip(
     .toUpperCase();
 
   ctx.fillStyle = theme.subtextColor;
-  ctx.font = "600 17px -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif";
-  ctx.letterSpacing = "2px";
+  ctx.font = "600 24px -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif";
+  ctx.letterSpacing = "3px";
   ctx.fillText(
     `${formattedDate}  •  ${formattedTime}`,
     stripWidth / 2,
-    footerStartY + 46
+    footerStartY + 64
   );
 
-  // Accent Dots / Hearts
-  const dotY = footerStartY + 92;
-  const dotSpacing = 24;
+  // Accent Dots
+  const dotY = footerStartY + 128;
+  const dotSpacing = 32;
   const startDotX = stripWidth / 2 - (3 * dotSpacing) / 2;
   for (let d = 0; d < 4; d++) {
     ctx.beginPath();
-    ctx.arc(startDotX + d * dotSpacing, dotY, 4.5, 0, Math.PI * 2);
+    ctx.arc(startDotX + d * dotSpacing, dotY, 6, 0, Math.PI * 2);
     ctx.fillStyle = theme.accentDot;
     ctx.fill();
   }
 
-  // 5. Composite Hand-written Doodle / Signature Canvas on top
+  // 5. Composite Doodle / Signature layer
   if (doodleCanvas) {
     ctx.drawImage(doodleCanvas, 0, 0, stripWidth, totalHeight);
   }
