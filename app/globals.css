@@ -1,18 +1,15 @@
 @import "tailwindcss";
+@source "../app";
 
 :root {
   --background: #000000;
   --foreground: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
-}
-
 * {
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
 }
@@ -27,31 +24,64 @@ body {
   position: fixed;
   background-color: #000000;
   color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, -apple-system, sans-serif;
   touch-action: manipulation;
 }
 
-/* iOS Safe Areas */
-.safe-top {
-  padding-top: max(16px, env(safe-area-inset-top));
+/* Safe areas */
+.safe-top-area {
+  padding-top: max(20px, env(safe-area-inset-top));
 }
 
-.safe-bottom {
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
+.safe-bottom-area {
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
 }
 
-.safe-left {
-  padding-left: env(safe-area-inset-left);
+/* Camera viewfinder framing brackets */
+.viewfinder-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
 }
 
-.safe-right {
-  padding-right: env(safe-area-inset-right);
+.corner-tl {
+  top: 16px;
+  left: 16px;
+  border-top-width: 2.5px;
+  border-left-width: 2.5px;
+  border-top-left-radius: 8px;
+}
+
+.corner-tr {
+  top: 16px;
+  right: 16px;
+  border-top-width: 2.5px;
+  border-right-width: 2.5px;
+  border-top-right-radius: 8px;
+}
+
+.corner-bl {
+  bottom: 16px;
+  left: 16px;
+  border-bottom-width: 2.5px;
+  border-left-width: 2.5px;
+  border-bottom-left-radius: 8px;
+}
+
+.corner-br {
+  bottom: 16px;
+  right: 16px;
+  border-bottom-width: 2.5px;
+  border-right-width: 2.5px;
+  border-bottom-right-radius: 8px;
 }
 
 /* Flash animation */
 @keyframes cameraFlash {
   0% {
-    opacity: 0.95;
+    opacity: 1;
   }
   100% {
     opacity: 0;
@@ -59,17 +89,17 @@ body {
 }
 
 .animate-flash {
-  animation: cameraFlash 0.3s ease-out forwards;
+  animation: cameraFlash 0.25s ease-out forwards;
 }
 
 /* Countdown pop animation */
 @keyframes numberPop {
   0% {
-    transform: scale(0.4);
+    transform: scale(0.35);
     opacity: 0;
   }
-  40% {
-    transform: scale(1.15);
+  50% {
+    transform: scale(1.18);
     opacity: 1;
   }
   100% {
@@ -82,7 +112,7 @@ body {
   animation: numberPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Photo strip entrance */
+/* Strip slide up animation */
 @keyframes stripSlideUp {
   0% {
     transform: translateY(30px) scale(0.96);
@@ -95,5 +125,5 @@ body {
 }
 
 .animate-strip {
-  animation: stripSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: stripSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
