@@ -13,7 +13,6 @@ export type FilterId =
 export interface FilterOption {
   id: FilterId;
   name: string;
-  nameEn: string;
   badge: string;
   desc: string;
   cssFilter: string;
@@ -22,82 +21,72 @@ export interface FilterOption {
 export const FILTERS: FilterOption[] = [
   {
     id: "none",
-    name: "原图高清",
-    nameEn: "HD Clear",
+    name: "HD Clear",
     badge: "CRISP",
-    desc: "极致清晰度，自然纯净肤色",
+    desc: "Ultra-sharp clarity & natural skin tones",
     cssFilter: "contrast(1.05) brightness(1.02)",
   },
   {
     id: "haru",
-    name: "韩国晴空蓝",
-    nameEn: "Haru Blue",
+    name: "Haru Blue",
     badge: "TRENDING",
-    desc: "韩国超火冷白皮蓝调，清透高级",
+    desc: "Cool-toned Korean sky blue film glow",
     cssFilter: "contrast(1.08) brightness(1.06) saturate(1.05) hue-rotate(-10deg)",
   },
   {
     id: "polaroid",
-    name: "拍立得 600",
-    nameEn: "Polaroid 600",
+    name: "Polaroid 600",
     badge: "RETRO",
-    desc: "经典即时相纸显影质感，青绿暗部",
+    desc: "Vintage instant print with teal undertones",
     cssFilter: "contrast(1.12) sepia(0.18) saturate(1.15) brightness(1.02)",
   },
   {
     id: "hk",
-    name: "港风电影",
-    nameEn: "HK Cinema",
+    name: "HK Cinema",
     badge: "FILM",
-    desc: "浓郁复古王家卫胶片感，暖金泛绿",
+    desc: "Wong Kar-wai amber glow & rich emerald shadows",
     cssFilter: "contrast(1.18) saturate(1.22) sepia(0.24) hue-rotate(5deg)",
   },
   {
     id: "glam",
-    name: "梦幻奶油光",
-    nameEn: "Soft Glam",
+    name: "Soft Glam",
     badge: "CREAM",
-    desc: "日系柔光奶油肌，朦胧浪漫高光",
+    desc: "Dreamy cream glow & soft skin highlights",
     cssFilter: "contrast(1.08) brightness(1.12) saturate(1.1)",
   },
   {
     id: "fisheye",
-    name: "趣味大鱼眼",
-    nameEn: "Y2K Fisheye",
+    name: "Y2K Fisheye",
     badge: "FUNKY",
-    desc: "千禧年超广角趣味凸透镜，搞怪出片",
+    desc: "Ultra-wide funky barrel distortion lens",
     cssFilter: "contrast(1.15) saturate(1.2)",
   },
   {
     id: "cyber",
-    name: "霓虹赛博",
-    nameEn: "Neon Cyber",
+    name: "Neon Cyber",
     badge: "POP",
-    desc: "电光紫粉与青色双色调冲击感",
+    desc: "Electric cyan & neon magenta duotone pop",
     cssFilter: "contrast(1.3) hue-rotate(280deg) saturate(1.35)",
   },
   {
     id: "bw",
-    name: "经典银盐黑白",
-    nameEn: "Silver B&W",
+    name: "Silver B&W",
     badge: "B&W",
-    desc: "高反差黑白影调，情绪张力十足",
+    desc: "High-contrast monochrome silver gelatin film",
     cssFilter: "grayscale(1) contrast(1.4) brightness(1.02)",
   },
   {
     id: "grain",
-    name: "复古颗粒",
-    nameEn: "35mm Grain",
+    name: "35mm Grain",
     badge: "ANALOG",
-    desc: "细腻真实的 35mm 胶卷颗粒感",
+    desc: "Authentic fine-grain 35mm ISO 800 texture",
     cssFilter: "contrast(1.12) brightness(1.02) sepia(0.12)",
   },
   {
     id: "pixel",
-    name: "8-Bit 像素",
-    nameEn: "8-Bit Pixel",
-    badge: "PIXEL",
-    desc: "怀旧千禧掌机马赛克像素画风",
+    name: "8-Bit Pixel",
+    badge: "ARCADE",
+    desc: "Nostalgic handheld arcade pixel art",
     cssFilter: "contrast(1.25) saturate(1.2)",
   },
 ];
@@ -112,12 +101,8 @@ export function enhanceSharpness(
 ) {
   const imgData = ctx.getImageData(0, 0, width, height);
   const data = imgData.data;
-  // Lightweight 3x3 unsharp mask kernel:
-  // [  0, -0.5,  0 ]
-  // [ -0.5,  3, -0.5 ]
-  // [  0, -0.5,  0 ]
   const copy = new Uint8ClampedArray(data);
-  const amount = 0.28; // Subtle edge enhancement without noise amplification
+  const amount = 0.28;
 
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
@@ -154,7 +139,7 @@ function applyFisheyeDistortion(
   const cx = width / 2;
   const cy = height / 2;
   const radius = Math.sqrt(cx * cx + cy * cy);
-  const strength = 1.65; // Fisheye curve intensity
+  const strength = 1.65;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -164,7 +149,6 @@ function applyFisheyeDistortion(
 
       if (dist < radius) {
         const normDist = dist / radius;
-        // Barrel distortion map
         const r = Math.pow(normDist, strength);
         const theta = Math.atan2(dy, dx);
 
@@ -226,7 +210,7 @@ export function applyFilterToCanvas(
     ctx.putImageData(imgData, 0, 0);
   }
 
-  // 3. Film Grain filter (fine-grained analog grain)
+  // 3. Film Grain filter
   if (filterId === "grain") {
     const grainImg = ctx.getImageData(0, 0, width, height);
     const d = grainImg.data;
@@ -256,20 +240,19 @@ export function applyFilterToCanvas(
     ctx.putImageData(bwImg, 0, 0);
   }
 
-  // 5. Haru Sky Blue tinting (cool highlights, clean skin tone)
+  // 5. Haru Sky Blue tinting
   if (filterId === "haru") {
     const imgData = ctx.getImageData(0, 0, width, height);
     const d = imgData.data;
     for (let i = 0; i < d.length; i += 4) {
-      // Slightly lift blues and reduce red cast in midtones
-      d[i] = Math.max(0, d[i] * 0.96); // Red
-      d[i + 1] = Math.min(255, d[i + 1] * 1.02); // Green
-      d[i + 2] = Math.min(255, d[i + 2] * 1.08 + 4); // Blue
+      d[i] = Math.max(0, d[i] * 0.96);
+      d[i + 1] = Math.min(255, d[i + 1] * 1.02);
+      d[i + 2] = Math.min(255, d[i + 2] * 1.08 + 4);
     }
     ctx.putImageData(imgData, 0, 0);
   }
 
-  // 6. Aperture Depth-of-Field Soft Focus & Vignette
+  // 6. Aperture Depth-of-Field Soft Focus
   if (apertureValue < 8) {
     const maxAperture = 1.4;
     const factor = Math.max(0, (8 - apertureValue) / (8 - maxAperture));
@@ -289,7 +272,7 @@ export function applyFilterToCanvas(
     ctx.restore();
   }
 
-  // 7. Enhance sharpness for crystal clarity (except on pixel or soft glam)
+  // 7. Enhance sharpness for crystal clarity
   if (filterId !== "pixel" && filterId !== "glam") {
     enhanceSharpness(ctx, width, height);
   }

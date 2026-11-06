@@ -16,13 +16,13 @@ interface Props {
 }
 
 const PALETTE = [
-  { name: "白色", color: "#FFFFFF" },
-  { name: "黑色", color: "#111827" },
-  { name: "荧光粉", color: "#FF2A85" },
-  { name: "樱花粉", color: "#FFB6C1" },
-  { name: "明黄色", color: "#FDE047" },
-  { name: "电光蓝", color: "#38BDF8" },
-  { name: "薄荷绿", color: "#4ADE80" },
+  { name: "White", color: "#FFFFFF" },
+  { name: "Black", color: "#111827" },
+  { name: "Mint Green", color: "#10B981" },
+  { name: "Neon Lime", color: "#A3E635" },
+  { name: "Hot Pink", color: "#EC4899" },
+  { name: "Sunny Yellow", color: "#FDE047" },
+  { name: "Electric Blue", color: "#38BDF8" },
 ];
 
 export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCanvas(
@@ -30,8 +30,8 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
   ref
 ) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [color, setColor] = useState<string>("#FF2A85");
-  const [lineWidth, setLineWidth] = useState<number>(5);
+  const [color, setColor] = useState<string>("#10B981");
+  const [lineWidth, setLineWidth] = useState<number>(6);
   const [isEraser, setIsEraser] = useState<boolean>(false);
   const [history, setHistory] = useState<ImageData[]>([]);
   const isDrawingRef = useRef<boolean>(false);
@@ -43,13 +43,11 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
     clear: handleClear,
   }));
 
-  // Save initial empty canvas state
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    // ensure blank transparent
     ctx.clearRect(0, 0, width, height);
   }, [width, height]);
 
@@ -70,7 +68,7 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
     if (!ctx) return;
 
     const newHistory = [...history];
-    newHistory.pop(); // remove current
+    newHistory.pop();
 
     if (newHistory.length > 0) {
       const prevData = newHistory[newHistory.length - 1];
@@ -125,7 +123,6 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      // Dot
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, lineWidth / 2, 0, Math.PI * 2);
       ctx.fill();
@@ -190,7 +187,7 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
                   setIsEraser(false);
                 }}
                 className={`w-7 h-7 rounded-full flex-shrink-0 transition-transform ${
-                  isSelected ? "scale-125 ring-2 ring-white ring-offset-2 ring-offset-black" : "opacity-80 active:scale-95"
+                  isSelected ? "scale-125 ring-2 ring-emerald-400 ring-offset-2 ring-offset-black" : "opacity-80 active:scale-95"
                 }`}
                 style={{ backgroundColor: p.color }}
                 title={p.name}
@@ -202,30 +199,30 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
           <button
             type="button"
             onClick={() => setIsEraser(true)}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-full border transition-all ${
+            className={`px-3 py-1 text-xs font-bold rounded-full border transition-all ${
               isEraser
-                ? "bg-white text-black border-white"
+                ? "bg-emerald-500 text-white border-emerald-400"
                 : "bg-neutral-800 text-neutral-300 border-neutral-700"
             }`}
           >
-            橡皮擦
+            Eraser
           </button>
         </div>
 
         {/* Brush Size & Undo/Clear Actions */}
         <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
           <div className="flex items-center gap-1.5">
-            <span className="text-neutral-400">粗细:</span>
-            {[3, 6, 12].map((size) => (
+            <span className="text-neutral-400 font-medium">Size:</span>
+            {[4, 8, 16].map((size) => (
               <button
                 key={size}
                 type="button"
                 onClick={() => setLineWidth(size)}
                 className={`w-6 h-6 rounded-md flex items-center justify-center font-bold ${
-                  lineWidth === size ? "bg-white text-black" : "bg-neutral-800 text-neutral-400"
+                  lineWidth === size ? "bg-emerald-500 text-white" : "bg-neutral-800 text-neutral-400"
                 }`}
               >
-                {size === 3 ? "S" : size === 6 ? "M" : "L"}
+                {size === 4 ? "S" : size === 8 ? "M" : "L"}
               </button>
             ))}
           </div>
@@ -235,17 +232,17 @@ export const DoodleCanvas = forwardRef<DoodleCanvasRef, Props>(function DoodleCa
               type="button"
               disabled={history.length === 0}
               onClick={handleUndo}
-              className="px-2.5 py-1 rounded-md bg-neutral-800 text-neutral-300 disabled:opacity-30 active:scale-95 transition-transform"
+              className="px-2.5 py-1 rounded-md bg-neutral-800 text-neutral-300 font-semibold disabled:opacity-30 active:scale-95 transition-transform"
             >
-              撤销
+              Undo
             </button>
             <button
               type="button"
               disabled={history.length === 0}
               onClick={handleClear}
-              className="px-2.5 py-1 rounded-md bg-neutral-800 text-red-400 disabled:opacity-30 active:scale-95 transition-transform"
+              className="px-2.5 py-1 rounded-md bg-neutral-800 text-red-400 font-semibold disabled:opacity-30 active:scale-95 transition-transform"
             >
-              清空
+              Clear
             </button>
           </div>
         </div>

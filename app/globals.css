@@ -4,6 +4,9 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  --color-mint: #10b981;
+  --color-mint-light: #34d399;
+  --color-mint-glow: rgba(16, 185, 129, 0.45);
 }
 
 * {
@@ -37,12 +40,12 @@ body {
   padding-bottom: max(32px, env(safe-area-inset-bottom));
 }
 
-/* Camera viewfinder framing brackets */
+/* Camera viewfinder framing brackets with mint accent */
 .viewfinder-corner {
   position: absolute;
   width: 24px;
   height: 24px;
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(52, 211, 153, 0.65);
   pointer-events: none;
 }
 

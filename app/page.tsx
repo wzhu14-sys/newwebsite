@@ -47,8 +47,8 @@ export default function PhotoBooth() {
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
 
-  // Results State: Paper Theme, Doodling & Save
-  const [selectedThemeId, setSelectedThemeId] = useState<string>("pastel-pink");
+  // Results State: Paper Theme, Doodling & Save (Default to Fresh Mint)
+  const [selectedThemeId, setSelectedThemeId] = useState<string>("fresh-mint");
   const [photoStripUrl, setPhotoStripUrl] = useState<string | null>(null);
   const [stripBlob, setStripBlob] = useState<Blob | null>(null);
   const [activeTab, setActiveTab] = useState<"view" | "doodle">("view");
@@ -69,7 +69,6 @@ export default function PhotoBooth() {
           return;
         }
 
-        // Request Ultra-HD / 4K / 1080p high resolution constraints
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: facing },
@@ -114,7 +113,6 @@ export default function PhotoBooth() {
     if (!video) return "";
 
     const canvas = document.createElement("canvas");
-    // Use the native camera stream sensor resolution
     const width = video.videoWidth || 1920;
     const height = video.videoHeight || 1080;
     canvas.width = width;
@@ -126,13 +124,11 @@ export default function PhotoBooth() {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // Mirror image if isMirrored is active
     if (isMirrored) {
       ctx.translate(width, 0);
       ctx.scale(-1, 1);
     }
 
-    // Draw video frame
     const currentFilterConfig = FILTERS.find((f) => f.id === selectedFilter);
     if (currentFilterConfig && currentFilterConfig.cssFilter !== "none") {
       ctx.filter = currentFilterConfig.cssFilter;
@@ -140,10 +136,8 @@ export default function PhotoBooth() {
     ctx.drawImage(video, 0, 0, width, height);
     ctx.filter = "none";
 
-    // Apply filter processing + sharpening
     applyFilterToCanvas(ctx, width, height, selectedFilter, aperture);
 
-    // High quality JPEG
     return canvas.toDataURL("image/jpeg", 1.0);
   }, [isMirrored, selectedFilter, aperture]);
 
@@ -170,7 +164,7 @@ export default function PhotoBooth() {
 
       setCountdown(0);
 
-      // Shutter flash & heavy mechanical thud
+      // Shutter flash & mechanical thud
       setIsFlashing(true);
       playMechanicalShutterThud();
       if ("vibrate" in navigator) {
@@ -185,7 +179,6 @@ export default function PhotoBooth() {
       setIsFlashing(false);
       setCountdown(null);
 
-      // Brief breather between shots
       if (shot < 4) {
         await new Promise((r) => setTimeout(r, 700));
       }
@@ -262,7 +255,7 @@ export default function PhotoBooth() {
 
     if (!currentUrl || !currentBlob) return;
 
-    const fileName = `purikura-${Date.now()}.png`;
+    const fileName = `photobooth-${Date.now()}.png`;
     const file = new File([currentBlob], fileName, { type: "image/png" });
 
     if (
@@ -275,7 +268,7 @@ export default function PhotoBooth() {
           title: "Life 4 Cuts Photo Strip",
           text: "Created with Photo Booth!",
         });
-        setSaveStatus("Saved to Photos / 已分享!");
+        setSaveStatus("Saved to Photos!");
         setTimeout(() => setSaveStatus(null), 3000);
         return;
       } catch (err: unknown) {
@@ -286,7 +279,6 @@ export default function PhotoBooth() {
       }
     }
 
-    // Laptop/Desktop download
     try {
       const a = document.createElement("a");
       a.href = currentUrl;
@@ -294,11 +286,11 @@ export default function PhotoBooth() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setSaveStatus("Downloaded / 已保存!");
+      setSaveStatus("Downloaded!");
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (err) {
       console.error("Download failed:", err);
-      setSaveStatus("Save failed / 保存失败");
+      setSaveStatus("Save Failed");
       setTimeout(() => setSaveStatus(null), 3000);
     }
   };
@@ -316,27 +308,27 @@ export default function PhotoBooth() {
         backgroundColor: "#000000",
       }}
     >
-      {/* 1. Camera Denied Modal */}
+      {/* 1. Camera Denied Screen */}
       {permission === "denied" && (
         <div
           className="absolute inset-0 z-50 flex flex-col items-center justify-center px-6 text-center bg-black/95 safe-top-area safe-bottom-area"
           style={{ position: "absolute", inset: 0, zIndex: 60 }}
         >
-          <div className="w-20 h-20 mb-6 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+          <div className="w-20 h-20 mb-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
             <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold mb-2">需要相机权限 / Camera Needed</h1>
+          <h1 className="text-2xl font-bold mb-2">Camera Access Needed</h1>
           <p className="text-gray-300 text-sm max-w-sm mb-6 leading-relaxed">
-            请在浏览器设置中允许相机访问权限，以便体验大头贴拍摄。
+            Please allow camera access in your browser settings to start the photo booth.
           </p>
           <button
             onClick={() => startCamera(facingMode)}
-            className="w-full max-w-xs py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-base rounded-full shadow-lg active:scale-95 transition-transform"
+            className="w-full max-w-xs py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold text-base rounded-full shadow-lg shadow-emerald-500/20 active:scale-95 transition-transform"
           >
-            开启相机 / Try Again
+            Enable Camera
           </button>
         </div>
       )}
@@ -383,11 +375,11 @@ export default function PhotoBooth() {
           />
         )}
 
-        {/* Purikura Framing Corner Brackets */}
-        <div className="viewfinder-corner corner-tl border-pink-400/70" />
-        <div className="viewfinder-corner corner-tr border-pink-400/70" />
-        <div className="viewfinder-corner corner-bl border-pink-400/70" />
-        <div className="viewfinder-corner corner-br border-pink-400/70" />
+        {/* Mint Framing Corner Brackets */}
+        <div className="viewfinder-corner corner-tl border-emerald-400/80" />
+        <div className="viewfinder-corner corner-tr border-emerald-400/80" />
+        <div className="viewfinder-corner corner-bl border-emerald-400/80" />
+        <div className="viewfinder-corner corner-br border-emerald-400/80" />
       </div>
 
       {/* 3. Screen Flash */}
@@ -415,10 +407,10 @@ export default function PhotoBooth() {
         >
           {/* Main Top Navigation Row */}
           <div className="flex items-center justify-between w-full">
-            {/* Purikura Brand Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-pink-500/30 shadow-md pointer-events-auto">
-              <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping" />
-              <span className="text-xs font-black tracking-wider uppercase text-pink-200">
+            {/* Mint Brand Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-emerald-500/30 shadow-md pointer-events-auto">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-xs font-black tracking-wider uppercase text-emerald-300">
                 LIFE 4 CUTS
               </span>
             </div>
@@ -434,11 +426,11 @@ export default function PhotoBooth() {
                 }}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-xl border transition-all flex items-center gap-1.5 ${
                   showFilterPicker
-                    ? "bg-pink-500 text-white border-pink-400 shadow-lg shadow-pink-500/30"
+                    ? "bg-emerald-500 text-black border-emerald-300 shadow-lg shadow-emerald-500/30"
                     : "bg-black/60 text-neutral-200 border-white/15"
                 }`}
               >
-                <span>✨ 滤镜: {currentFilterConfig?.name}</span>
+                <span>✨ Filter: {currentFilterConfig?.name}</span>
               </button>
 
               {/* Aperture Button */}
@@ -450,7 +442,7 @@ export default function PhotoBooth() {
                 }}
                 className={`px-2.5 py-1.5 rounded-full text-xs font-bold backdrop-blur-xl border transition-all ${
                   showApertureControl
-                    ? "bg-amber-400 text-black border-amber-300"
+                    ? "bg-teal-300 text-black border-teal-200"
                     : "bg-black/60 text-neutral-200 border-white/15"
                 }`}
               >
@@ -461,10 +453,10 @@ export default function PhotoBooth() {
               <button
                 type="button"
                 onClick={() => setIsMirrored((prev) => !prev)}
-                title={isMirrored ? "镜像开" : "镜像关"}
+                title={isMirrored ? "Mirror: ON" : "Mirror: OFF"}
                 className={`p-2 rounded-full backdrop-blur-xl border transition-all ${
                   isMirrored
-                    ? "bg-pink-500/30 border-pink-400/50 text-pink-300"
+                    ? "bg-emerald-500/30 border-emerald-400 text-emerald-300"
                     : "bg-black/60 border-white/15 text-white/70"
                 }`}
               >
@@ -478,8 +470,8 @@ export default function PhotoBooth() {
           {/* Filter Picker Drawer */}
           {showFilterPicker && (
             <div className="mt-2.5 p-2.5 bg-black/85 backdrop-blur-2xl border border-white/15 rounded-2xl flex flex-col gap-2 pointer-events-auto animate-pop shadow-2xl">
-              <div className="text-[11px] font-bold text-pink-300 px-1">
-                选择精选大头贴滤镜:
+              <div className="text-[11px] font-bold text-emerald-300 px-1">
+                Select Photo Booth Filter:
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {FILTERS.map((f) => {
@@ -491,7 +483,7 @@ export default function PhotoBooth() {
                       onClick={() => setSelectedFilter(f.id)}
                       className={`px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 transition-all text-left ${
                         isSelected
-                          ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md scale-105"
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-md scale-105"
                           : "bg-neutral-900 text-neutral-300 border border-neutral-800"
                       }`}
                     >
@@ -501,7 +493,7 @@ export default function PhotoBooth() {
                           {f.badge}
                         </span>
                       </div>
-                      <div className="text-[9px] opacity-75 mt-0.5 max-w-[110px] truncate">
+                      <div className="text-[9px] opacity-80 mt-0.5 max-w-[120px] truncate">
                         {f.desc}
                       </div>
                     </button>
@@ -514,10 +506,10 @@ export default function PhotoBooth() {
           {/* Aperture Slider Drawer */}
           {showApertureControl && (
             <div className="mt-2.5 p-3 bg-black/85 backdrop-blur-2xl border border-white/15 rounded-2xl pointer-events-auto animate-pop shadow-2xl flex flex-col gap-1.5">
-              <div className="flex justify-between text-xs font-bold text-amber-300">
-                <span>镜头光圈: f/{aperture}</span>
+              <div className="flex justify-between text-xs font-bold text-emerald-300">
+                <span>Lens Aperture: f/{aperture}</span>
                 <span className="text-neutral-400 text-[11px]">
-                  {aperture <= 2.0 ? "大光圈 • 柔光虚化" : aperture <= 4 ? "标准人像" : "小光圈 • 全景清晰"}
+                  {aperture <= 2.0 ? "Wide Aperture • Soft Bokeh" : aperture <= 4 ? "Standard Portrait" : "Small Aperture • Edge-to-Edge Sharp"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-1 mt-1">
@@ -528,7 +520,7 @@ export default function PhotoBooth() {
                     onClick={() => setAperture(fVal)}
                     className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
                       aperture === fVal
-                        ? "bg-amber-400 text-black shadow-md scale-110"
+                        ? "bg-emerald-400 text-black shadow-md scale-110"
                         : "bg-neutral-800 text-neutral-300"
                     }`}
                   >
@@ -555,9 +547,9 @@ export default function PhotoBooth() {
                 key={index}
                 className={`w-14 h-12 rounded-xl border-2 overflow-hidden transition-all duration-300 shadow-xl relative ${
                   photo
-                    ? "border-pink-400 bg-black scale-100 opacity-100"
+                    ? "border-emerald-400 bg-black scale-100 opacity-100"
                     : isCurrent
-                    ? "border-amber-400 bg-amber-400/30 scale-110 animate-pulse"
+                    ? "border-teal-300 bg-teal-400/30 scale-110 animate-pulse"
                     : "border-white/20 bg-black/60 opacity-40"
                 }`}
               >
@@ -588,13 +580,13 @@ export default function PhotoBooth() {
         >
           <div
             key={countdown}
-            className="text-9xl font-black text-pink-300 drop-shadow-[0_4px_30px_rgba(255,42,133,0.8)] animate-pop"
+            className="text-9xl font-black text-emerald-300 drop-shadow-[0_4px_30px_rgba(16,185,129,0.8)] animate-pop"
             style={{ fontSize: "7.5rem", fontWeight: 900 }}
           >
             {countdown}
           </div>
-          <div className="mt-4 px-6 py-2 rounded-full bg-black/75 backdrop-blur-2xl border border-pink-400/60 shadow-lg text-sm font-bold tracking-wider uppercase text-pink-100">
-            Shot {currentShotIndex} of 4 • 笑一个 📸
+          <div className="mt-4 px-6 py-2 rounded-full bg-black/75 backdrop-blur-2xl border border-emerald-400/60 shadow-lg text-sm font-bold tracking-wider uppercase text-emerald-100">
+            Shot {currentShotIndex} of 4 • Smile! 📸
           </div>
         </div>
       )}
@@ -614,14 +606,14 @@ export default function PhotoBooth() {
             minHeight: "140px",
           }}
         >
-          {/* Left Dock Button: Active Filter Pill */}
+          {/* Left Dock: Shot Count Indicator */}
           <div className="w-16 flex items-center justify-center">
-            <span className="text-[11px] font-bold tracking-widest text-pink-300 uppercase px-2.5 py-1 rounded-full bg-pink-500/20 border border-pink-500/30">
+            <span className="text-[11px] font-bold tracking-widest text-emerald-300 uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
               4 SHOTS
             </span>
           </div>
 
-          {/* Center: Iconic Japanese Purikura Shutter Button */}
+          {/* Center: Mint Shutter Button */}
           <button
             onClick={startPhotoBoothSession}
             disabled={permission !== "granted"}
@@ -631,8 +623,8 @@ export default function PhotoBooth() {
               width: "86px",
               height: "86px",
               borderRadius: "50%",
-              border: "4px solid #FF2A85",
-              boxShadow: "0 0 20px rgba(255, 42, 133, 0.4)",
+              border: "4px solid #10B981",
+              boxShadow: "0 0 24px rgba(16, 185, 129, 0.45)",
               backgroundColor: "transparent",
               padding: "4px",
               cursor: "pointer",
@@ -655,13 +647,13 @@ export default function PhotoBooth() {
                   width: "18px",
                   height: "18px",
                   borderRadius: "50%",
-                  backgroundColor: "#FF2A85",
+                  backgroundColor: "#10B981",
                 }}
               />
             </div>
           </button>
 
-          {/* Right Dock Button: Camera Switch */}
+          {/* Right Dock: Camera Switch */}
           <div className="w-16 flex items-center justify-center">
             <button
               type="button"
@@ -685,7 +677,7 @@ export default function PhotoBooth() {
         </footer>
       )}
 
-      {/* 8. Results Screen: Purikura Japanese/Korean Photo Booth */}
+      {/* 8. Results Screen */}
       {appState === "results" && photoStripUrl && (
         <div
           className="absolute inset-0 flex flex-col bg-neutral-950/98 animate-strip"
@@ -714,18 +706,18 @@ export default function PhotoBooth() {
                     : "text-neutral-400 hover:text-white"
                 }`}
               >
-                高清预览 / Preview
+                Photo Strip
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("doodle")}
                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
                   activeTab === "doodle"
-                    ? "bg-pink-500 text-white shadow-md shadow-pink-500/30"
+                    ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/30"
                     : "text-neutral-400 hover:text-white"
                 }`}
               >
-                ✏️ 手写涂鸦 / Doodle
+                ✏️ Doodle & Sign
               </button>
             </div>
 
@@ -734,8 +726,8 @@ export default function PhotoBooth() {
                 {saveStatus}
               </span>
             ) : isPrinting ? (
-              <span className="px-3 py-1 rounded-full bg-pink-500/20 border border-pink-500/40 text-pink-300 text-xs font-bold animate-bounce">
-                🖨️ 吐纸打印中...
+              <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold animate-bounce">
+                🖨️ Printing Strip...
               </span>
             ) : (
               <span className="text-xs font-bold text-neutral-400">
@@ -747,7 +739,7 @@ export default function PhotoBooth() {
           {/* Paper Theme Swatch Bar */}
           <div className="px-4 py-2 bg-neutral-950/80 border-b border-neutral-900/60 flex items-center justify-between gap-2 overflow-x-auto">
             <span className="text-xs font-semibold text-neutral-400 flex-shrink-0">
-              边框颜色:
+              Paper Theme:
             </span>
             <div className="flex items-center gap-2 overflow-x-auto py-1">
               {PAPER_THEMES.map((theme) => {
@@ -759,7 +751,7 @@ export default function PhotoBooth() {
                     onClick={() => handleThemeChange(theme.id)}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all flex-shrink-0 ${
                       isSelected
-                        ? "ring-2 ring-pink-500 border-white scale-105 shadow-md"
+                        ? "ring-2 ring-emerald-400 border-white scale-105 shadow-md"
                         : "border-neutral-800 opacity-80"
                     }`}
                     style={{
@@ -825,12 +817,12 @@ export default function PhotoBooth() {
             {/* Save Button */}
             <button
               onClick={handleSave}
-              className="w-full py-3.5 px-6 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white font-extrabold text-base rounded-full shadow-lg shadow-pink-500/25 active:scale-95 transition-transform flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-black font-extrabold text-base rounded-full shadow-lg shadow-emerald-500/25 active:scale-95 transition-transform flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              <span>保存高清照片条 / Save Photo Strip</span>
+              <span>Save to Photos</span>
             </button>
 
             {/* Retake Button */}
@@ -841,7 +833,7 @@ export default function PhotoBooth() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span>重新拍摄 / Retake</span>
+              <span>Retake</span>
             </button>
           </div>
         </div>

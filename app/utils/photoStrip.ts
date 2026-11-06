@@ -10,26 +10,35 @@ export interface PaperTheme {
 
 export const PAPER_THEMES: PaperTheme[] = [
   {
+    id: "fresh-mint",
+    name: "Fresh Mint",
+    bgColor: "#E6FBF5",
+    textColor: "#064E3B",
+    subtextColor: "#059669",
+    borderColor: "#A7F3D0",
+    accentDot: "#10B981",
+  },
+  {
     id: "classic-white",
-    name: "纯白物语",
+    name: "Classic White",
     bgColor: "#FFFFFF",
     textColor: "#111827",
     subtextColor: "#6B7280",
     borderColor: "#E5E7EB",
-    accentDot: "#D1D5DB",
+    accentDot: "#10B981",
   },
   {
     id: "noir-black",
-    name: "暗夜黑潮",
+    name: "Noir Black",
     bgColor: "#121212",
     textColor: "#FFFFFF",
     subtextColor: "#9CA3AF",
     borderColor: "#262626",
-    accentDot: "#E11D48",
+    accentDot: "#34D399",
   },
   {
     id: "pastel-pink",
-    name: "甜心粉樱",
+    name: "Sweet Sakura",
     bgColor: "#FEE2E2",
     textColor: "#881337",
     subtextColor: "#BE123C",
@@ -38,7 +47,7 @@ export const PAPER_THEMES: PaperTheme[] = [
   },
   {
     id: "y2k-silver",
-    name: "千禧银灰",
+    name: "Y2K Chrome",
     bgColor: "#E2E8F0",
     textColor: "#0F172A",
     subtextColor: "#475569",
@@ -47,7 +56,7 @@ export const PAPER_THEMES: PaperTheme[] = [
   },
   {
     id: "butter-cream",
-    name: "复古奶油",
+    name: "Butter Cream",
     bgColor: "#FEF3C7",
     textColor: "#78350F",
     subtextColor: "#B45309",
@@ -56,21 +65,12 @@ export const PAPER_THEMES: PaperTheme[] = [
   },
   {
     id: "lavender",
-    name: "浪漫香芋",
+    name: "Lavender Mist",
     bgColor: "#EDE9FE",
     textColor: "#4C1D95",
     subtextColor: "#6D28D9",
     borderColor: "#DDD6FE",
     accentDot: "#A855F7",
-  },
-  {
-    id: "matcha-green",
-    name: "清爽抹茶",
-    bgColor: "#DCFCE7",
-    textColor: "#14532D",
-    subtextColor: "#15803D",
-    borderColor: "#BBF7D0",
-    accentDot: "#22C55E",
   },
 ];
 
@@ -88,7 +88,7 @@ export async function createPhotoStrip(
   options: PhotoStripOptions = {}
 ): Promise<{ dataUrl: string; blob: Blob }> {
   const {
-    themeId = "pastel-pink",
+    themeId = "fresh-mint",
     doodleCanvas = null,
     date = new Date(),
   } = options;
