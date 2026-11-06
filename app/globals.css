@@ -2,17 +2,18 @@
 @source "../app";
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
-  --color-mint: #10b981;
-  --color-mint-light: #34d399;
-  --color-mint-glow: rgba(16, 185, 129, 0.45);
+  --background: #C3C7D0;
+  --foreground: #000000;
+  --win-bg: #D4D0C8;
+  --win-dark: #808080;
+  --win-darker: #404040;
+  --win-light: #FFFFFF;
+  --win-accent-mint: #10B981;
 }
 
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
 }
@@ -23,62 +24,57 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  position: fixed;
-  background-color: #000000;
-  color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  background-color: #C3C7D0;
+  color: #000000;
+  font-family: 'MS Sans Serif', Geneva, Tahoma, -apple-system, BlinkMacSystemFont, "Segoe UI", monospace, sans-serif;
   touch-action: manipulation;
 }
 
-/* Safe areas */
-.safe-top-area {
-  padding-top: max(20px, env(safe-area-inset-top));
+/* Classic Retro Bevel Styles */
+.retro-window {
+  background-color: #D4D0C8;
+  border: 3px solid;
+  border-color: #FFFFFF #404040 #404040 #FFFFFF;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.35);
 }
 
-.safe-bottom-area {
-  padding-bottom: max(32px, env(safe-area-inset-bottom));
+.retro-bevel-out {
+  border: 2px solid;
+  border-color: #FFFFFF #404040 #404040 #FFFFFF;
+  background-color: #D4D0C8;
 }
 
-/* Camera viewfinder framing brackets with mint accent */
-.viewfinder-corner {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border-color: rgba(52, 211, 153, 0.65);
-  pointer-events: none;
+.retro-bevel-in {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background-color: #000000;
 }
 
-.corner-tl {
-  top: 16px;
-  left: 16px;
-  border-top-width: 2.5px;
-  border-left-width: 2.5px;
-  border-top-left-radius: 8px;
+.retro-button {
+  background-color: #D4D0C8;
+  border: 2px solid;
+  border-color: #FFFFFF #404040 #404040 #FFFFFF;
+  box-shadow: 1px 1px 0px #000000;
+  cursor: pointer;
 }
 
-.corner-tr {
-  top: 16px;
-  right: 16px;
-  border-top-width: 2.5px;
-  border-right-width: 2.5px;
-  border-top-right-radius: 8px;
+.retro-button:active {
+  border-color: #404040 #FFFFFF #FFFFFF #404040;
+  box-shadow: none;
+  transform: translate(1px, 1px);
 }
 
-.corner-bl {
-  bottom: 16px;
-  left: 16px;
-  border-bottom-width: 2.5px;
-  border-left-width: 2.5px;
-  border-bottom-left-radius: 8px;
-}
-
-.corner-br {
-  bottom: 16px;
-  right: 16px;
-  border-bottom-width: 2.5px;
-  border-right-width: 2.5px;
-  border-bottom-right-radius: 8px;
+.retro-select {
+  appearance: none;
+  background-color: #FFFFFF;
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  color: #000000;
+  padding: 4px 24px 4px 8px;
+  font-size: 13px;
+  font-family: 'MS Sans Serif', Geneva, Tahoma, monospace, sans-serif;
+  cursor: pointer;
 }
 
 /* Flash animation */
@@ -95,14 +91,28 @@ body {
   animation: cameraFlash 0.25s ease-out forwards;
 }
 
+/* Spinning CD animation */
+@keyframes spinCD {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-cd {
+  animation: spinCD 3s linear infinite;
+}
+
 /* Countdown pop animation */
 @keyframes numberPop {
   0% {
-    transform: scale(0.35);
+    transform: scale(0.4);
     opacity: 0;
   }
   50% {
-    transform: scale(1.18);
+    transform: scale(1.15);
     opacity: 1;
   }
   100% {
@@ -118,7 +128,7 @@ body {
 /* Strip slide up animation */
 @keyframes stripSlideUp {
   0% {
-    transform: translateY(30px) scale(0.96);
+    transform: translateY(20px) scale(0.96);
     opacity: 0;
   }
   100% {
@@ -128,5 +138,5 @@ body {
 }
 
 .animate-strip {
-  animation: stripSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: stripSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

@@ -34,12 +34,10 @@ export default function PhotoBooth() {
 
   // Camera Settings: Mirror & Aperture
   const [isMirrored, setIsMirrored] = useState<boolean>(true);
-  const [aperture, setAperture] = useState<number>(2.8); // f/1.4 ~ f/16
-  const [showApertureControl, setShowApertureControl] = useState<boolean>(false);
+  const [aperture, setAperture] = useState<number>(2.8);
 
   // Filter Selection
   const [selectedFilter, setSelectedFilter] = useState<FilterId>("haru");
-  const [showFilterPicker, setShowFilterPicker] = useState<boolean>(false);
 
   // Multi-shot sequence state
   const [currentShotIndex, setCurrentShotIndex] = useState<number>(0);
@@ -47,7 +45,7 @@ export default function PhotoBooth() {
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
 
-  // Results State: Paper Theme, Doodling & Save (Default to Fresh Mint)
+  // Results State: Paper Theme, Doodling & Save
   const [selectedThemeId, setSelectedThemeId] = useState<string>("fresh-mint");
   const [photoStripUrl, setPhotoStripUrl] = useState<string | null>(null);
   const [stripBlob, setStripBlob] = useState<Blob | null>(null);
@@ -152,7 +150,6 @@ export default function PhotoBooth() {
     for (let shot = 1; shot <= 4; shot++) {
       setCurrentShotIndex(shot);
 
-      // 3-2-1 Countdown with tick-tock audio
       for (let c = 3; c >= 1; c--) {
         setCountdown(c);
         playCountdownTick(c % 2 === 0);
@@ -164,7 +161,6 @@ export default function PhotoBooth() {
 
       setCountdown(0);
 
-      // Shutter flash & mechanical thud
       setIsFlashing(true);
       playMechanicalShutterThud();
       if ("vibrate" in navigator) {
@@ -184,7 +180,6 @@ export default function PhotoBooth() {
       }
     }
 
-    // Sequence finished -> Thermal printer sound & transition to results
     setIsPrinting(true);
     playThermalPrinterWhir(1.6);
 
@@ -203,7 +198,6 @@ export default function PhotoBooth() {
     }
   };
 
-  // Re-composite strip when theme or doodle changes
   const updateStrip = useCallback(
     async (themeId: string = selectedThemeId) => {
       if (capturedPhotos.length === 0) return;
@@ -266,7 +260,7 @@ export default function PhotoBooth() {
         await navigator.share({
           files: [file],
           title: "Life 4 Cuts Photo Strip",
-          text: "Created with Photo Booth!",
+          text: "Created with Retro Photo Booth!",
         });
         setSaveStatus("Saved to Photos!");
         setTimeout(() => setSaveStatus(null), 3000);
@@ -298,546 +292,397 @@ export default function PhotoBooth() {
   const currentFilterConfig = FILTERS.find((f) => f.id === selectedFilter);
 
   return (
-    <main
-      className="relative w-full h-[100dvh] bg-black text-white overflow-hidden select-none"
-      style={{
-        position: "fixed",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        backgroundColor: "#000000",
-      }}
-    >
-      {/* 1. Camera Denied Screen */}
-      {permission === "denied" && (
-        <div
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center px-6 text-center bg-black/95 safe-top-area safe-bottom-area"
-          style={{ position: "absolute", inset: 0, zIndex: 60 }}
-        >
-          <div className="w-20 h-20 mb-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Camera Access Needed</h1>
-          <p className="text-gray-300 text-sm max-w-sm mb-6 leading-relaxed">
-            Please allow camera access in your browser settings to start the photo booth.
-          </p>
-          <button
-            onClick={() => startCamera(facingMode)}
-            className="w-full max-w-xs py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold text-base rounded-full shadow-lg shadow-emerald-500/20 active:scale-95 transition-transform"
-          >
-            Enable Camera
-          </button>
-        </div>
-      )}
-
-      {/* 2. Full-Screen Live Video Feed with Filter Preview */}
-      <div
-        className="absolute inset-0 w-full h-full overflow-hidden bg-neutral-950 flex items-center justify-center"
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          zIndex: 1,
-        }}
-      >
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full h-full object-cover"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: isMirrored ? "scaleX(-1)" : "none",
-            filter: currentFilterConfig?.cssFilter || "none",
-          }}
-        />
-
-        {/* Aperture Soft Depth-of-Field Simulation */}
-        {aperture < 8 && (
-          <div
-            className="absolute inset-0 pointer-events-none transition-opacity duration-300"
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `radial-gradient(circle at center, transparent 40%, rgba(0,0,0,${(
-                (8 - aperture) *
-                0.04
-              ).toFixed(2)}) 85%)`,
-              backdropFilter: `blur(${Math.max(0, (4 - aperture) * 1.1)}px)`,
-            }}
-          />
-        )}
-
-        {/* Mint Framing Corner Brackets */}
-        <div className="viewfinder-corner corner-tl border-emerald-400/80" />
-        <div className="viewfinder-corner corner-tr border-emerald-400/80" />
-        <div className="viewfinder-corner corner-bl border-emerald-400/80" />
-        <div className="viewfinder-corner corner-br border-emerald-400/80" />
-      </div>
-
-      {/* 3. Screen Flash */}
-      {isFlashing && (
-        <div
-          className="absolute inset-0 bg-white animate-flash pointer-events-none"
-          style={{ position: "absolute", inset: 0, zIndex: 60 }}
-        />
-      )}
-
-      {/* 4. Top Safe-Area Bar: Filters, Mirror, Aperture */}
-      {appState !== "results" && (
-        <header
-          className="absolute top-0 inset-x-0 flex flex-col px-4 safe-top-area pointer-events-none"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 30,
-            paddingTop: "max(14px, env(safe-area-inset-top))",
-            paddingLeft: "max(16px, env(safe-area-inset-left))",
-            paddingRight: "max(16px, env(safe-area-inset-right))",
-          }}
-        >
-          {/* Main Top Navigation Row */}
-          <div className="flex items-center justify-between w-full">
-            {/* Mint Brand Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-emerald-500/30 shadow-md pointer-events-auto">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-xs font-black tracking-wider uppercase text-emerald-300">
-                LIFE 4 CUTS
-              </span>
-            </div>
-
-            {/* Quick Action Pills */}
-            <div className="flex items-center gap-2 pointer-events-auto">
-              {/* Filter Selector Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFilterPicker((prev) => !prev);
-                  setShowApertureControl(false);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-xl border transition-all flex items-center gap-1.5 ${
-                  showFilterPicker
-                    ? "bg-emerald-500 text-black border-emerald-300 shadow-lg shadow-emerald-500/30"
-                    : "bg-black/60 text-neutral-200 border-white/15"
-                }`}
-              >
-                <span>✨ Filter: {currentFilterConfig?.name}</span>
-              </button>
-
-              {/* Aperture Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowApertureControl((prev) => !prev);
-                  setShowFilterPicker(false);
-                }}
-                className={`px-2.5 py-1.5 rounded-full text-xs font-bold backdrop-blur-xl border transition-all ${
-                  showApertureControl
-                    ? "bg-teal-300 text-black border-teal-200"
-                    : "bg-black/60 text-neutral-200 border-white/15"
-                }`}
-              >
-                f/{aperture}
-              </button>
-
-              {/* Mirror Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsMirrored((prev) => !prev)}
-                title={isMirrored ? "Mirror: ON" : "Mirror: OFF"}
-                className={`p-2 rounded-full backdrop-blur-xl border transition-all ${
-                  isMirrored
-                    ? "bg-emerald-500/30 border-emerald-400 text-emerald-300"
-                    : "bg-black/60 border-white/15 text-white/70"
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-              </button>
-            </div>
+    <div className="min-h-[100dvh] w-full bg-[#C3C7D0] flex flex-col items-center justify-center p-2 sm:p-6 overflow-y-auto">
+      {/* Retro Window Container (Portrait Focused) */}
+      <div className="retro-window w-full max-w-[460px] flex flex-col overflow-hidden my-auto">
+        {/* 1. Classic Windows Title Bar */}
+        <div className="bg-[#000080] text-white px-2 py-1 flex items-center justify-between font-bold text-xs select-none">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="text-sm">📸</span>
+            <span className="tracking-wide">PhotoBooth FM</span>
           </div>
 
-          {/* Filter Picker Drawer */}
-          {showFilterPicker && (
-            <div className="mt-2.5 p-2.5 bg-black/85 backdrop-blur-2xl border border-white/15 rounded-2xl flex flex-col gap-2 pointer-events-auto animate-pop shadow-2xl">
-              <div className="text-[11px] font-bold text-emerald-300 px-1">
-                Select Photo Booth Filter:
-              </div>
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {FILTERS.map((f) => {
-                  const isSelected = selectedFilter === f.id;
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setSelectedFilter(f.id)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 transition-all text-left ${
-                        isSelected
-                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-md scale-105"
-                          : "bg-neutral-900 text-neutral-300 border border-neutral-800"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span>{f.name}</span>
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-black/30 font-mono">
-                          {f.badge}
-                        </span>
-                      </div>
-                      <div className="text-[9px] opacity-80 mt-0.5 max-w-[120px] truncate">
-                        {f.desc}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Aperture Slider Drawer */}
-          {showApertureControl && (
-            <div className="mt-2.5 p-3 bg-black/85 backdrop-blur-2xl border border-white/15 rounded-2xl pointer-events-auto animate-pop shadow-2xl flex flex-col gap-1.5">
-              <div className="flex justify-between text-xs font-bold text-emerald-300">
-                <span>Lens Aperture: f/{aperture}</span>
-                <span className="text-neutral-400 text-[11px]">
-                  {aperture <= 2.0 ? "Wide Aperture • Soft Bokeh" : aperture <= 4 ? "Standard Portrait" : "Small Aperture • Edge-to-Edge Sharp"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-1 mt-1">
-                {[1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 16.0].map((fVal) => (
-                  <button
-                    key={fVal}
-                    type="button"
-                    onClick={() => setAperture(fVal)}
-                    className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
-                      aperture === fVal
-                        ? "bg-emerald-400 text-black shadow-md scale-110"
-                        : "bg-neutral-800 text-neutral-300"
-                    }`}
-                  >
-                    {fVal}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </header>
-      )}
-
-      {/* 5. Live Captured Thumbnails Preview Rail (during capture) */}
-      {appState === "capturing" && (
-        <div
-          className="absolute top-24 right-4 flex flex-col gap-2.5 pointer-events-none"
-          style={{ position: "absolute", top: "90px", right: "16px", zIndex: 35 }}
-        >
-          {[0, 1, 2, 3].map((index) => {
-            const photo = capturedPhotos[index];
-            const isCurrent = currentShotIndex === index + 1;
-            return (
-              <div
-                key={index}
-                className={`w-14 h-12 rounded-xl border-2 overflow-hidden transition-all duration-300 shadow-xl relative ${
-                  photo
-                    ? "border-emerald-400 bg-black scale-100 opacity-100"
-                    : isCurrent
-                    ? "border-teal-300 bg-teal-400/30 scale-110 animate-pulse"
-                    : "border-white/20 bg-black/60 opacity-40"
-                }`}
-              >
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photo}
-                    alt={`Shot ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-[10px] font-bold text-white/80">
-                    <span>{index + 1}</span>
-                    <span className="text-[9px]">SHOT</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 6. Big Animated Countdown during capture */}
-      {appState === "capturing" && countdown !== null && countdown > 0 && (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-          style={{ position: "absolute", inset: 0, zIndex: 40 }}
-        >
-          <div
-            key={countdown}
-            className="text-9xl font-black text-emerald-300 drop-shadow-[0_4px_30px_rgba(16,185,129,0.8)] animate-pop"
-            style={{ fontSize: "7.5rem", fontWeight: 900 }}
-          >
-            {countdown}
-          </div>
-          <div className="mt-4 px-6 py-2 rounded-full bg-black/75 backdrop-blur-2xl border border-emerald-400/60 shadow-lg text-sm font-bold tracking-wider uppercase text-emerald-100">
-            Shot {currentShotIndex} of 4 • Smile! 📸
-          </div>
-        </div>
-      )}
-
-      {/* 7. Bottom Shutter Controls Deck (Camera Mode) */}
-      {appState === "camera" && (
-        <footer
-          className="absolute bottom-0 inset-x-0 flex items-center justify-around px-8 bg-gradient-to-t from-black/95 via-black/75 to-transparent pointer-events-auto"
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 30,
-            paddingBottom: "max(32px, env(safe-area-inset-bottom))",
-            paddingTop: "24px",
-            minHeight: "140px",
-          }}
-        >
-          {/* Left Dock: Shot Count Indicator */}
-          <div className="w-16 flex items-center justify-center">
-            <span className="text-[11px] font-bold tracking-widest text-emerald-300 uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
-              4 SHOTS
-            </span>
-          </div>
-
-          {/* Center: Mint Shutter Button */}
-          <button
-            onClick={startPhotoBoothSession}
-            disabled={permission !== "granted"}
-            aria-label="Start Photo Booth"
-            className="relative flex items-center justify-center active:scale-90 transition-transform duration-150 focus:outline-none"
-            style={{
-              width: "86px",
-              height: "86px",
-              borderRadius: "50%",
-              border: "4px solid #10B981",
-              boxShadow: "0 0 24px rgba(16, 185, 129, 0.45)",
-              backgroundColor: "transparent",
-              padding: "4px",
-              cursor: "pointer",
-            }}
-          >
-            <div
-              style={{
-                width: "70px",
-                height: "70px",
-                borderRadius: "50%",
-                backgroundColor: "#FFFFFF",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  backgroundColor: "#10B981",
-                }}
-              />
-            </div>
-          </button>
-
-          {/* Right Dock: Camera Switch */}
-          <div className="w-16 flex items-center justify-center">
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={toggleFacingMode}
-              aria-label="Flip front/back camera"
-              className="p-3 rounded-full bg-white/15 backdrop-blur-xl text-white active:scale-90 transition-transform shadow-lg border border-white/15"
-              style={{
-                width: "48px",
-                height: "48px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-              }}
+              className="retro-button w-4 h-4 bg-[#D4D0C8] text-black font-bold text-[10px] leading-none flex items-center justify-center"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              _
+            </button>
+            <button
+              type="button"
+              className="retro-button w-4 h-4 bg-[#D4D0C8] text-black font-bold text-[10px] leading-none flex items-center justify-center"
+            >
+              □
+            </button>
+            <button
+              type="button"
+              className="retro-button w-4 h-4 bg-[#D4D0C8] text-black font-bold text-[10px] leading-none flex items-center justify-center"
+            >
+              ✕
             </button>
           </div>
-        </footer>
-      )}
+        </div>
 
-      {/* 8. Results Screen */}
-      {appState === "results" && photoStripUrl && (
-        <div
-          className="absolute inset-0 flex flex-col bg-neutral-950/98 animate-strip"
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 45,
-            display: "flex",
-            flexDirection: "column",
-            backgroundColor: "rgba(12, 12, 12, 0.98)",
-          }}
-        >
-          {/* Top Bar on Results */}
-          <div
-            className="flex items-center justify-between px-5 py-2.5 safe-top-area border-b border-neutral-900 bg-black/60 backdrop-blur-xl"
-            style={{ paddingTop: "max(14px, env(safe-area-inset-top))" }}
-          >
-            {/* View / Doodle Mode Switch Tabs */}
-            <div className="flex items-center p-1 bg-neutral-900 rounded-full border border-neutral-800">
-              <button
-                type="button"
-                onClick={() => setActiveTab("view")}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                  activeTab === "view"
-                    ? "bg-white text-black shadow-md"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                Photo Strip
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("doodle")}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                  activeTab === "doodle"
-                    ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/30"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                ✏️ Doodle & Sign
-              </button>
-            </div>
-
-            {saveStatus ? (
-              <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold animate-pulse">
-                {saveStatus}
-              </span>
-            ) : isPrinting ? (
-              <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold animate-bounce">
-                🖨️ Printing Strip...
-              </span>
-            ) : (
-              <span className="text-xs font-bold text-neutral-400">
-                LIFE 4 CUTS
-              </span>
-            )}
-          </div>
-
-          {/* Paper Theme Swatch Bar */}
-          <div className="px-4 py-2 bg-neutral-950/80 border-b border-neutral-900/60 flex items-center justify-between gap-2 overflow-x-auto">
-            <span className="text-xs font-semibold text-neutral-400 flex-shrink-0">
-              Paper Theme:
-            </span>
-            <div className="flex items-center gap-2 overflow-x-auto py-1">
-              {PAPER_THEMES.map((theme) => {
-                const isSelected = selectedThemeId === theme.id;
-                return (
+        {/* 2. Window Main Body */}
+        <div className="p-3 bg-[#D4D0C8] flex flex-col gap-3">
+          {/* Top Panel: Sunken Viewport (Left) + Tactile Control Deck (Right) */}
+          <div className="flex gap-3 items-stretch">
+            {/* Left: Sunken Portrait Camera Viewport (保持竖屏拍摄) */}
+            <div className="relative w-[56%] aspect-[3/4] retro-bevel-in overflow-hidden flex items-center justify-center bg-black">
+              {permission === "denied" ? (
+                <div className="p-3 text-center text-red-400 text-xs flex flex-col items-center justify-center">
+                  <span className="text-2xl mb-1">⚠️</span>
+                  <span>Camera access needed</span>
                   <button
-                    key={theme.id}
-                    type="button"
-                    onClick={() => handleThemeChange(theme.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all flex-shrink-0 ${
-                      isSelected
-                        ? "ring-2 ring-emerald-400 border-white scale-105 shadow-md"
-                        : "border-neutral-800 opacity-80"
-                    }`}
-                    style={{
-                      backgroundColor: theme.bgColor,
-                      color: theme.textColor,
-                    }}
+                    onClick={() => startCamera(facingMode)}
+                    className="retro-button px-2 py-1 mt-2 text-black text-[11px] font-bold"
                   >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: theme.accentDot }}
-                    />
-                    <span>{theme.name}</span>
+                    Enable
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 flex items-center justify-center">
-            {activeTab === "view" ? (
-              /* View Strip Preview */
-              <div className="max-w-[280px] sm:max-w-[320px] w-full flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photoStripUrl}
-                  alt="Photo Booth Strip"
-                  className="w-auto h-auto max-h-[60vh] rounded-lg shadow-2xl border border-neutral-800 object-contain mx-auto transition-transform"
-                  style={{
-                    maxHeight: "60vh",
-                    boxShadow: "0 25px 50px rgba(0, 0, 0, 0.85)",
-                  }}
-                />
-              </div>
-            ) : (
-              /* Interactive Doodle Mode */
-              <div className="relative max-w-[280px] sm:max-w-[320px] w-full flex flex-col items-center">
-                <div className="relative w-full rounded-lg overflow-hidden border border-neutral-700 shadow-2xl">
+                </div>
+              ) : appState === "results" && photoStripUrl ? (
+                /* Results preview inside the retro frame */
+                <div className="w-full h-full p-1 overflow-y-auto flex items-center justify-center bg-black">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photoStripUrl}
-                    alt="Photo Strip for doodling"
-                    className="w-full h-auto block select-none pointer-events-none"
-                  />
-                  {/* Transparent Drawing Canvas Overlay */}
-                  <DoodleCanvas
-                    ref={doodleRef}
-                    width={1200}
-                    height={3712}
-                    className="absolute inset-0 w-full h-full"
-                    onStrokeChange={() => updateStrip(selectedThemeId)}
+                    alt="Photo Strip Preview"
+                    className="w-full h-auto max-h-full object-contain mx-auto"
                   />
                 </div>
+              ) : (
+                /* Live Camera Video Feed */
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{
+                      transform: isMirrored ? "scaleX(-1)" : "none",
+                      filter: currentFilterConfig?.cssFilter || "none",
+                    }}
+                  />
+
+                  {/* Aperture soft focus vignette */}
+                  {aperture < 8 && (
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: `radial-gradient(circle at center, transparent 40%, rgba(0,0,0,${(
+                          (8 - aperture) *
+                          0.04
+                        ).toFixed(2)}) 85%)`,
+                        backdropFilter: `blur(${Math.max(0, (4 - aperture) * 1.1)}px)`,
+                      }}
+                    />
+                  )}
+
+                  {/* Red REC dot */}
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded text-[10px] font-mono text-white">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                    <span>REC</span>
+                  </div>
+
+                  {/* Shot countdown overlay inside viewport */}
+                  {appState === "capturing" && countdown !== null && countdown > 0 && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 pointer-events-none">
+                      <div
+                        key={countdown}
+                        className="text-6xl font-black text-[#10B981] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] animate-pop"
+                      >
+                        {countdown}
+                      </div>
+                      <div className="text-[11px] font-bold text-white bg-black/80 px-2 py-0.5 mt-1 border border-white/20">
+                        SHOT {currentShotIndex} OF 4
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Flash */}
+                  {isFlashing && (
+                    <div className="absolute inset-0 bg-white animate-flash pointer-events-none" />
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Right: Tactile Audio/Player Control Deck */}
+            <div className="flex-1 flex flex-col justify-between gap-2">
+              {/* Spinning CD & LED Meter */}
+              <div className="flex items-center justify-between gap-2">
+                {/* Iridescent Spinning CD */}
+                <div
+                  className={`w-12 h-12 rounded-full retro-bevel-out relative flex items-center justify-center shadow ${
+                    appState === "capturing" ? "animate-spin-cd" : ""
+                  }`}
+                  style={{
+                    background:
+                      "radial-gradient(circle, #D4D0C8 18%, #808080 20%, #E2E8F0 40%, #A7F3D0 60%, #DDD6FE 80%, #D4D0C8 100%)",
+                  }}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white border border-gray-400 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                  </div>
+                </div>
+
+                {/* Vertical LED Progress Bar (Mint Green) */}
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-12 retro-bevel-in p-0.5 flex flex-col-reverse justify-between bg-black">
+                    {[1, 2, 3, 4].map((step) => {
+                      const isLit =
+                        appState === "results" || currentShotIndex >= step;
+                      return (
+                        <div
+                          key={step}
+                          className={`w-full h-2 rounded-[1px] transition-colors ${
+                            isLit
+                              ? "bg-[#10B981] shadow-[0_0_4px_#10B981]"
+                              : "bg-[#064E3B]"
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setAperture((a) => (a <= 1.4 ? 16 : 1.4))}
+                      className="retro-button w-6 h-5 text-[11px] font-bold flex items-center justify-center"
+                      title="Toggle Aperture"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsMirrored((m) => !m)}
+                      className="retro-button w-6 h-5 text-[11px] font-bold flex items-center justify-center"
+                      title="Toggle Mirror"
+                    >
+                      🪞
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Tape Cassette Motif */}
+              <div className="retro-bevel-in p-1 bg-[#1F2937] flex items-center justify-around h-7 text-[9px] text-[#10B981] font-mono">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-sm" />
+                <span>[ 4 SHOTS CASSETTE ]</span>
+              </div>
+
+              {/* Shutter / Snap Button (Play/Pause style) */}
+              {appState !== "results" ? (
+                <button
+                  type="button"
+                  onClick={startPhotoBoothSession}
+                  disabled={permission !== "granted" || appState === "capturing"}
+                  className="retro-button w-full py-2 bg-[#D4D0C8] font-bold text-xs flex items-center justify-center gap-1.5 active:bg-[#C0C0C0]"
+                >
+                  <span className="w-3 h-3 rounded-full bg-[#10B981] shadow-[0_0_6px_#10B981]" />
+                  <span>{appState === "capturing" ? "RECORDING..." : "● SNAP"}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRetake}
+                  className="retro-button w-full py-2 bg-[#D4D0C8] font-bold text-xs flex items-center justify-center gap-1"
+                >
+                  <span>↺ RETAKE</span>
+                </button>
+              )}
+
+              {/* Row of Icon Controls (Flip Camera, Undo, Save) */}
+              <div className="flex items-center justify-between gap-1">
+                <button
+                  type="button"
+                  onClick={toggleFacingMode}
+                  className="retro-button flex-1 py-1 text-xs font-bold flex items-center justify-center"
+                  title="Flip front/rear camera"
+                >
+                  ⏮ FLIP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMirrored((m) => !m)}
+                  className="retro-button flex-1 py-1 text-xs font-bold flex items-center justify-center"
+                  title="Mirror view"
+                >
+                  ⇄ MIR
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={appState !== "results"}
+                  className={`retro-button flex-1 py-1 text-xs font-bold flex items-center justify-center ${
+                    appState === "results"
+                      ? "bg-[#10B981] text-black font-extrabold"
+                      : "opacity-40"
+                  }`}
+                  title="Save strip to photos"
+                >
+                  ♥ SAVE
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Results Action Buttons: Save & Retake */}
-          <div
-            className="p-4 sm:p-5 bg-black/85 backdrop-blur-2xl border-t border-neutral-900 flex flex-col gap-2.5 max-w-md mx-auto w-full"
-            style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}
-          >
-            {/* Save Button */}
-            <button
-              onClick={handleSave}
-              className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-black font-extrabold text-base rounded-full shadow-lg shadow-emerald-500/25 active:scale-95 transition-transform flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span>Save to Photos</span>
-            </button>
+          {/* Middle Selectors: Artist, Title, Station, Mode style */}
+          <div className="flex flex-col gap-2 pt-1 font-mono text-xs">
+            {/* Filter Selector */}
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-right font-bold text-[#111827]">Filter:</span>
+              <div className="flex-1 relative">
+                <select
+                  value={selectedFilter}
+                  onChange={(e) => setSelectedFilter(e.target.value as FilterId)}
+                  className="retro-select w-full"
+                >
+                  {FILTERS.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name} ({f.badge})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            {/* Retake Button */}
-            <button
-              onClick={handleRetake}
-              className="w-full py-3 px-6 bg-neutral-900 border border-neutral-800 text-neutral-300 font-bold text-sm rounded-full active:scale-95 transition-transform flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Retake</span>
-            </button>
+            {/* Aperture Selector */}
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-right font-bold text-[#111827]">Aperture:</span>
+              <div className="flex-1 relative">
+                <select
+                  value={aperture}
+                  onChange={(e) => setAperture(parseFloat(e.target.value))}
+                  className="retro-select w-full"
+                >
+                  <option value={1.4}>f/1.4 - Wide Bokeh (Soft Focus)</option>
+                  <option value={2.0}>f/2.0 - Dreamy Portrait</option>
+                  <option value={2.8}>f/2.8 - Standard Studio</option>
+                  <option value={4.0}>f/4.0 - Clean Balanced</option>
+                  <option value={8.0}>f/8.0 - Sharp Edge-to-Edge</option>
+                  <option value={16.0}>f/16.0 - Ultra Sharp Field</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Paper Theme Selector */}
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-right font-bold text-[#111827]">Theme:</span>
+              <div className="flex-1 relative">
+                <select
+                  value={selectedThemeId}
+                  onChange={(e) => handleThemeChange(e.target.value)}
+                  className="retro-select w-full"
+                >
+                  {PAPER_THEMES.map((theme) => (
+                    <option key={theme.id} value={theme.id}>
+                      {theme.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Lower Slider Bar & Time Indicator */}
+          <div className="flex items-center gap-3 pt-1">
+            <span className="font-mono text-xs font-bold w-10">
+              0:0{currentShotIndex || 4}
+            </span>
+
+            {/* Beveled Slider Track */}
+            <div className="flex-1 h-3 retro-bevel-in bg-[#808080] relative flex items-center">
+              {/* Draggable/Stepping Retro Slider Thumb */}
+              <div
+                className="w-4 h-5 retro-bevel-out bg-[#D4D0C8] shadow absolute cursor-pointer"
+                style={{
+                  left: `${((currentShotIndex || 4) / 4) * 88}%`,
+                  transform: "translateX(-50%)",
+                }}
+              />
+            </div>
+
+            <span className="font-mono text-xs font-bold w-12 text-right">
+              {appState === "capturing"
+                ? `${currentShotIndex}/4`
+                : appState === "results"
+                ? "DONE"
+                : "READY"}
+            </span>
+          </div>
+
+          {/* Results Action Mode Tab (Doodle Canvas overlay when requested) */}
+          {appState === "results" && (
+            <div className="flex flex-col gap-2 pt-2 border-t-2 border-[#808080]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-[#111827]">
+                  {saveStatus ? `Status: ${saveStatus}` : "Strip Ready!"}
+                </span>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(activeTab === "view" ? "doodle" : "view")}
+                    className="retro-button px-2.5 py-1 text-xs font-bold flex items-center gap-1"
+                  >
+                    {activeTab === "view" ? "✏️ Doodle Mode" : "🖼️ View Strip"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="retro-button px-3 py-1 bg-[#10B981] text-black text-xs font-extrabold flex items-center gap-1"
+                  >
+                    💾 Save to Photos
+                  </button>
+                </div>
+              </div>
+
+              {/* Embedded Doodle Tool when active */}
+              {activeTab === "doodle" && (
+                <div className="relative w-full rounded retro-bevel-in bg-black p-2 flex flex-col items-center">
+                  <div className="relative w-full max-w-[280px] overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photoStripUrl || ""}
+                      alt="Strip for doodling"
+                      className="w-full h-auto block select-none pointer-events-none"
+                    />
+                    <DoodleCanvas
+                      ref={doodleRef}
+                      width={1200}
+                      height={3712}
+                      className="absolute inset-0 w-full h-full"
+                      onStrokeChange={() => updateStrip(selectedThemeId)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Bottom Windows Taskbar (Start Bar) */}
+        <div className="h-9 bg-[#D4D0C8] border-t-2 border-white px-2 flex items-center justify-between font-mono text-xs select-none">
+          {/* Start Button */}
+          <button
+            type="button"
+            onClick={startPhotoBoothSession}
+            className="retro-button h-6 px-2 flex items-center gap-1.5 font-bold"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 border border-black/40" />
+            <span>Start</span>
+          </button>
+
+          {/* Inset Status Pill */}
+          <div className="h-6 px-3 retro-bevel-in bg-[#C3C7D0] flex items-center text-[11px] text-gray-800 truncate">
+            {saveStatus || "photobooth.vercel.app"}
           </div>
         </div>
-      )}
-    </main>
+      </div>
+    </div>
   );
 }
